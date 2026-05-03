@@ -10,6 +10,7 @@
 
 <body>
 
+
   <header>
     <h1>안녕하세요, 유병우의 포트폴리오입니다!</h1>
   </header>
@@ -44,11 +45,20 @@
     <br>
     <br>
     <h3 id="guestbook">방명록</h3>
-    <ul>
-      <li class="guestname"><strong>김철수</strong> : 오 지리네</li>
-      <li class="guestname"><strong>카리나</strong> : 오 대단하네</li>
-      <li class="guestname"><strong>고윤정</strong> : 오 멋지네</li>
-      <li class="guestname"><strong>손흥민</strong> : 오 대단하네</li>
+    <form action="">
+      <label for="nick">닉네임</label>
+      <input type="text" id="nick" name="nick" required>
+
+      <label for="content">댓글</label>
+      <input type="text" id="content" name="content" required>
+
+      <button type="submit">등록</button>
+    </form>
+    <ul id="comments">
+      <li class="comment"><strong>김철수</strong> : 오 지리네</li>
+      <li class="comment"><strong>카리나</strong> : 오 대단하네</li>
+      <li class="comment"><strong>고윤정</strong> : 오 멋지네</li>
+      <li class="comment"><strong>손흥민</strong> : 오 대단하네</li>
     </ul>
   </section>
   <aside>
@@ -59,6 +69,81 @@
   <footer>
     <p>Copyright © 2026 유병우. All rights reserved.</p>
   </footer>
+
+<!-- 슈파베이스 라이브러리를 CDN 방식으로 가져옵니다. -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+    //  슈바베이스 주소와 인증 정보를 입력합니다. 아래 키는 누구나 접속해도 되는 키입니다. 실제로는 보안에 유의해야 합니다.
+    const SUPABASE_URL = "https://yooggvegmnftbppkaeth.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlvb2dndmVnbW5mdGJwcGthZXRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MDYzMjQsImV4cCI6MjA4ODk4MjMyNH0.m50HsLodxK467-XhGTqNTKdEJbEXttElSkZrMmbDyes";
+    // 아래 스키마만 본인 스키마로 바꾸세요.
+    const GUESTBOOK_SCHEMA = "yubw";
+    const GUESTBOOK_TABLE = "guestbook";
+
+    // 슈파이베스와 연결할 객체를 생성합니다.
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // dom을 조작해서 폼, 인풋박스, 댓글칸 객체를 변수에 할당합니다.
+    const form = document.querySelector("form");
+    const nameInput = document.getElementById("nick");
+    const contentInput = document.getElementById("content");
+    const list = document.getElementById("comments");
+
+    // 특정 디비 테이블을 지정합니다.
+    function table() {
+        return supabaseClient.schema(GUESTBOOK_SCHEMA).from(GUESTBOOK_TABLE);
+    }
+
+    // 댓글 불러오기
+    // async는 비동기 입니다. 이 함수를 실행하면 오래 걸릴 수 있는데 비동기로 블러킹(다음으로 진행 못 하게 막힘)을 해소합니다.
+    async function loadComments() {
+        // sql과 비슷합니다. 다음 SQL 문장을 프로그래밍 언어로 표현했다고 보면 됩니다.
+        // SELECT * FROM [디비스키마명].[테이블명] ORDER BY created_at;
+        const { data } = await table()
+        .select("*")
+        .order("created_at", { ascending: false });
+
+        // 리스트 태그 안에 가져온 데이터를 dom으로 넣습니다.
+        list.innerHTML = data.map(item => `
+        <li class="comment">
+            <strong>${item.nickname}:</strong> ${item.content}
+        </li>
+        `).join("");
+    }
+
+    // 댓글 추가
+    async function addComment(e) {
+        // 파라매터 e는 이벤트 정보를 담은 객체입니다.
+        // 폼은 기본적으로 post를 날리고 페이지를 새로고침합니다.
+        // 그것을 원하는게 아니니 아무런 이벤트도 실행하지 말라고 막아줍니다.
+        e.preventDefault();
+
+        // 인풋박스에 넣어던 값을 가져옵니다.
+        const nickname = nameInput.value;
+        const content = contentInput.value;
+
+        // 디비에 다음 쿼리(요청)을 합니다.
+        // INSERT INTO [디비스키마명].[테이블명] (nickname, content) VALUES ([nickname], [content]);
+        await table().insert([
+        { nickname, content }
+        ]);
+
+        // 댓글을 다 작성했으니 댓글창 내용 초기화 합니다.
+        form.reset();
+
+        // 댓글 목록을 새로 가져옵니다.
+        loadComments();
+    }
+
+
+    // 폼 태그에서 제출 버튼을 누르면 폼 객체는 summit이라는 이벤트를 호출 받게 됩니다.
+    // 아래는 submit이라는 이벤트가 호출되었을 떄 실행될 콜백(함수를 호출) 로직을 추가하는 겁니다.
+    // addComment 라는 함수를 추가하고 있습니다.
+    form.addEventListener("submit", addComment);
+
+    // 최초 실행(브라우저가 이 파일을 읽을 때 읽자마자 바로 한번 실행합니다.)
+    loadComments();
+</script>
 </body>
 
 </html>
